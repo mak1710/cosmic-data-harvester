@@ -1,42 +1,31 @@
-import requests
-import pandas as pd
-from tqdm import tqdm
+# main.py
 
-# NASA API base URL
-BASE_URL = "https://images-api.nasa.gov/search"
+from etl.extract import fetch_data
+from etl.transform import transform_data
+from etl.load import display_data, save_data  
 
+def run_etl():
+    print("Starting ETL process...")
+    query = input("Explore NASA's intergalactic multimedia collections! (Search e.g. 'Mars Rover', 'Orion'): ")
+    # Extract
+    print("Extracting data...")
+    raw_data = fetch_data(query=query, max_pages=20)  
+    print(f"Total posts retrieved: {len(raw_data)}") 
+    print("Data extraction successful.")
 
-def transform_data(data):
-    """Transform raw NASA API data into a structured format."""
-    records = []
-    
-    for item in tqdm(data, desc="Transforming Data"):
-        record = {
-            "Title": item["data"][0].get("title", "N/A"),
-            "NASA ID": item["data"][0].get("nasa_id", "N/A"),
-            "Date Created": item["data"][0].get("date_created", "N/A"),
-            "Media Type": item["data"][0].get("media_type", "N/A"),
-            "Description": item["data"][0].get("description", "N/A"),
-            "Keywords": ", ".join(item["data"][0].get("keywords", ["N/A"])),
-            "Center": item["data"][0].get("center", "N/A"),
-            "Secondary Creator": item["data"][0].get("secondary_creator", "N/A"),
-            "Location": item["data"][0].get("location", "N/A"),
-            "Original URL": next((link.get("href") for link in item.get("links", []) if link.get("render") == "image"), "N/A"),
-        }
-        records.append(record)
-    
-    return pd.DataFrame(records)
+    # Transform
+    print("Transforming data...")
+    transformed_data = transform_data(raw_data)
+    print("Data transformation successful.")
 
-query = input("Explore NASA's intergalactic multimedia collections! (Search for e.g. 'Mars Rover', 'Orion'): ")
-# Fetch data from NASA API
-response = requests.get(BASE_URL, params={"q": query, "media_type": "image", "page_size": 10})
-data = response.json()
+    # Load 
+    print("Displaying data in terminal...")
+    display_data(transformed_data)  
 
-# Extract items from response
-items = data.get("collection", {}).get("items", [])
+    # Save to CSV file (dynamic filename which can be parameterized in ETL workflows)
+    filename = "nasa_data_extract.csv" 
+    print(f"Saving data to CSV: {filename}...")
+    save_data(transformed_data, filename) 
 
-df = transform_data(items)
-
-# Display transformed data present in DataFrame
-print(f"\nNASA Image Data - '{query}'\n")
-print(df.head())  
+if __name__ == "__main__":
+    run_etl()
